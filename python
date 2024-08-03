@@ -1,0 +1,402 @@
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+
+# URL of the GitHub topics API endpoint
+base_url = "https://github.com/topics"
+url = base_url + "?page={}"
+
+# Initialize an empty list to store topic names
+topics = []
+
+# Directly fetch data from the API endpoint or JavaScript function that loads more topics
+page_number = 1
+while True:
+    response = requests.get(url.format(page_number))
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # Find all divs with class="f3 lh-condensed mb-0 mt-1 Link--primary" (adjust based on actual HTML structure)
+    topic_elements = soup.find_all("p", class_="f3 lh-condensed mb-0 mt-1 Link--primary")
+
+    if not topic_elements:
+        break
+
+    # Extract topic names
+    for topic_element in topic_elements:
+        topic_name = topic_element.text.strip()
+        topics.append(topic_name)
+
+    # Increment page number if needed
+    page_number += 1
+
+# Create a DataFrame
+df = pd.DataFrame({"Topic Name": topics})
+
+# Save to CSV
+df.to_csv("github_topics.csv", index=False)
+
+print(f"Data saved successfully to github_topics.csv with {len(topics)} topics.")
+
+
+
+
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+
+# URL of the GitHub topics page
+base_url = "https://github.com/topics"
+url = base_url + "?page={}"
+
+# Initialize an empty list to store topic names and links
+topics = []
+
+# Directly fetch data from the API endpoint or JavaScript function that loads more topics
+page_number = 1
+while True:
+    response = requests.get(url.format(page_number))
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # Find all divs with class="f3 lh-condensed mb-0 mt-1 Link--primary" (adjust based on actual HTML structure)
+    topic_elements = soup.find_all("p", class_="f3 lh-condensed mb-0 mt-1 Link--primary")
+
+    if not topic_elements:
+        break
+
+    # Extract topic names and links
+    for topic_element in topic_elements:
+        topic_name = topic_element.text.strip()
+        topic_link = base_url + "/" + topic_name.replace(" ", "-")
+        topics.append({"Topic Name": topic_name, "Link to List of Repo": topic_link})
+
+    # Increment page number if needed
+    page_number += 1
+
+# Create a DataFrame
+df = pd.DataFrame(topics)
+
+# Save to CSV
+df.to_csv("github_topics_with_links.csv", index=False)
+
+print(f"Data saved successfully to github_topics_with_links.csv with {len(topics)} topics.")
+
+
+
+
+
+
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+
+# Load previously saved topics with links
+df = pd.read_csv("github_topics_with_links.csv")
+
+# Initialize an empty list to store repository names and their links
+repo_info = []
+
+# Set the maximum number of repositories to fetch per topic
+max_repos_per_topic = 20
+
+# Iterate through each topic's link
+for index, row in df.iterrows():
+    topic_name = row["Topic Name"]
+    topic_link = row["Link to List of Repo"]
+
+    # Fetch the page content
+    response = requests.get(topic_link)
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # Find all repositories
+    repo_elements = soup.find_all("article", class_="border rounded color-shadow-small color-bg-subtle my-4")
+
+    repo_count = 0
+
+    for repo_element in repo_elements:
+        if repo_count >= max_repos_per_topic:
+            break
+
+        # Find the div with class="px-3"
+        px3_div = repo_element.find("div", class_="px-3")
+
+        if px3_div:
+            # Find the div with class="d-flex flex-justify-between flex-items-start flex-wrap gap-2 my-3"
+            flex_div = px3_div.find("div", class_="d-flex flex-justify-between flex-items-start flex-wrap gap-2 my-3")
+
+            if flex_div:
+                # Find the div with class="d-flex flex-1"
+                flex1_div = flex_div.find("div", class_="d-flex flex-1")
+
+                if flex1_div:
+                    # Find the h3 tag within div with class="d-flex flex-1"
+                    h3_tag = flex1_div.find("h3", class_="f3 color-fg-muted text-normal lh-condensed")
+
+                    if h3_tag:
+                        # Find all anchor tags within the h3 tag
+                        anchor_tags = h3_tag.find_all("a", class_="Link")
+
+                        for anchor_tag in anchor_tags:
+                            # Extract the href attribute
+                            href = anchor_tag.get("href")
+
+                            # Append topic name and href to repo_info list
+                            repo_info.append({"Topic Name": topic_name, "Repo Href": href})
+
+                            repo_count += 1
+                            if repo_count >= max_repos_per_topic:
+                                break
+
+    print(f"Processed {topic_name}: Found {repo_count} repositories.")
+
+# Create DataFrame from repo_info
+repo_df = pd.DataFrame(repo_info)
+
+# Save DataFrame to CSV
+repo_df.to_csv("github_repos_with_hrefs.csv", index=False)
+
+print("Data saved successfully to github_repos_with_hrefs.csv.")
+
+
+
+
+
+
+import pandas as pd
+
+# Load the CSV files into DataFrames
+df1 = pd.read_csv("github_topics_with_links.csv")
+df2 = pd.read_csv("github_repos_with_hrefs.csv")
+
+# Merge the DataFrames
+merged_df = pd.merge(df1, df2, on="Topic Name", how="inner")
+
+# Save the merged DataFrame to a new CSV file
+merged_df.to_csv("repository.csv", index=False)
+
+print("Merged data saved successfully to repository.csv.")
+
+
+
+
+
+import pandas as pd
+
+# Load the repository.csv file into a DataFrame
+df = pd.read_csv("repository.csv")
+
+# Filter out odd-numbered rows (keep even-numbered rows)
+df_filtered = df[df.index % 2 == 0]
+
+# Save the filtered DataFrame to a new CSV file
+df_filtered.to_csv("repository_filtered.csv", index=False)
+
+print("Filtered data saved successfully to repository_filtered.csv.")
+
+
+
+
+
+
+import pandas as pd
+
+# Load the repository.csv file into a DataFrame
+df = pd.read_csv("repository.csv")
+
+# Filter out even-numbered rows (keep odd-numbered rows)
+df_filtered = df[df.index % 2 != 0]
+
+# Save the filtered DataFrame to a new CSV file
+df_filtered.to_csv("repository_filtered.csv", index=False)
+
+print("Filtered data saved successfully to repository_filtered.csv.")
+
+
+
+
+
+import pandas as pd
+
+# Load the repository_filtered.csv file into a DataFrame
+df = pd.read_csv("repository_filtered.csv")
+
+# Add a new column named "link" with value "https://github.com/topics"
+df['link'] = 'https://github.com/topics'
+
+# Save the updated DataFrame to a new CSV file
+df.to_csv("repository_with_link.csv", index=False)
+
+print("Updated data saved successfully to repository_with_link.csv.")
+
+
+
+
+
+import pandas as pd
+
+# Load the repository_with_link.csv file into a DataFrame
+df = pd.read_csv("repository_with_link.csv")
+
+# Display current column names to verify
+print("Current column names:", df.columns)
+
+# Adjust expected column names based on the actual names
+expected_columns = ['Topic Name', 'Link to List of Repo', 'link', 'Repo Href']
+
+# Reorder the columns based on expected names
+df = df[expected_columns]
+
+# Save the reordered DataFrame to a new CSV file
+df.to_csv("repository_reordered.csv", index=False)
+
+print("Reordered data saved successfully to repository_reordered.csv.")
+
+
+
+
+
+import pandas as pd
+
+# Load the repository_reordered.csv file into a DataFrame
+df = pd.read_csv("repository_reordered.csv")
+
+# Add a new column "sl.no" with serial numbers starting from 1
+df.insert(0, 'sl.no', range(1, 1 + len(df)))
+
+# Save the updated DataFrame to a new CSV file
+df.to_csv("repository_with_serial_numbers.csv", index=False)
+
+print("Updated data saved successfully to repository_with_serial_numbers.csv.")
+
+
+
+
+
+import pandas as pd
+
+# Load the repository_with_serial_numbers.csv file into a DataFrame
+df = pd.read_csv("repository_with_serial_numbers.csv")
+
+# Merge the contents of columns "link" and "repo href" into a new column "link"
+df['link'] = df['link'] + df['repo href']
+
+# Drop the original "repo href" column
+df.drop(columns=['repo href'], inplace=True)
+
+# Save the updated DataFrame to a new CSV file
+df.to_csv("repository_merged_links.csv", index=False)
+
+print("Updated data saved successfully to repository_merged_links.csv.")
+
+
+
+
+
+import pandas as pd
+import streamlit as st
+
+# Load the CSV file into a DataFrame
+df = pd.read_csv("repository_merged_links.csv")
+
+# Extract unique topics from the DataFrame
+topics = df['Topic Name'].unique()
+
+# Streamlit application
+st.title("Find the Popular Github Repository of Your Topic")
+
+# Dropdown for selecting a topic
+selected_topic = st.selectbox("Select a Topic", topics)
+
+# Display the selected topic's repositories
+st.write(f"Popular repositories for the topic: {selected_topic}")
+
+# Filter repositories for the selected topic
+filtered_repos = df[df['Topic Name'] == selected_topic]
+
+# Display repositories in a table
+st.table(filtered_repos[['link']])
+
+
+
+
+
+import pandas as pd
+import streamlit as st
+import random
+
+# Updated list of Unsplash coding-related photo URLs
+unsplash_photos = [
+    "https://images.unsplash.com/photo-1537498425277-c283d32ef9db",
+    "https://images.unsplash.com/photo-1518770660439-4636190af475",
+    "https://images.unsplash.com/photo-1519241047957-be31d7379a5d",
+    "https://images.unsplash.com/photo-1498050108023-c5249f4df085",
+    "https://images.unsplash.com/photo-1497493292307-31c376b6e479",
+    "https://images.unsplash.com/photo-1517694712202-14dd9538aa97",
+    "https://images.unsplash.com/photo-1531482615713-2afd69097998",
+    "https://images.unsplash.com/photo-1533743983669-94fa5c4338ec",
+    "https://images.unsplash.com/photo-1504805572947-34fad45aed93",
+    "https://images.unsplash.com/photo-1504384308090-c894fdcc538d",
+    "https://images.unsplash.com/photo-1505685296765-3a2736de412f",
+    "https://images.unsplash.com/photo-1518837695005-2083093ee35b",
+    "https://images.unsplash.com/photo-1515378791036-0648a3ef77b2",
+    "https://images.unsplash.com/photo-1516382812531-37372d8c5cfb",
+    "https://images.unsplash.com/photo-1518303676047-ea76e9a18e10",
+    "https://images.unsplash.com/photo-1519389950473-47ba0277781c",
+    "https://images.unsplash.com/photo-1526378722440-9d3f7b7a36b4",
+    "https://images.unsplash.com/photo-1528909514045-2fa4ac7a08ba",
+    "https://images.unsplash.com/photo-1547658719-da2b51169109",
+    "https://images.unsplash.com/photo-1552058544-f2b08422138a",
+    "https://images.unsplash.com/photo-1561154464-a4f36c4f02ae",
+    "https://images.unsplash.com/photo-1564844535910-2030ab24a4f7",
+    "https://images.unsplash.com/photo-1573495612937-6ba4f553e034",
+    "https://images.unsplash.com/photo-1584697964404-264e36c31e6e",
+    "https://images.unsplash.com/photo-1587620962725-abab7fe55159",
+    "https://images.unsplash.com/photo-1591696205602-2b589a6d0a4e",
+    "https://images.unsplash.com/photo-1591696331113-5f07a0c3b425",
+    "https://images.unsplash.com/photo-1600087509512-9ebf610f6b0c",
+    "https://images.unsplash.com/photo-1605460375648-278bcbd579a6",
+    "https://images.unsplash.com/photo-1603791440384-56cd371ee9a7"
+]
+
+# Function to get a random non-repeating list of images
+def get_random_photos(num_photos):
+    return random.sample(unsplash_photos, num_photos)
+
+# Load the CSV file
+df = pd.read_csv('repository_merged_links.csv')
+
+# Print the column names to debug
+st.write("Columns in the dataframe:", df.columns)
+
+# Streamlit app setup
+st.title("Find the Popular GitHub Repository of Your Topic")
+
+# Correct column names if necessary
+df.columns = [col.strip().lower().replace(' ', '_') for col in df.columns]
+
+# Dropdown menu for topics
+selected_topic = st.selectbox('Select a topic', df['topic_name'].unique())
+
+# Filter the DataFrame based on the selected topic
+filtered_df = df[df['topic_name'] == selected_topic]
+
+# Randomly select up to 50 rows from the filtered DataFrame
+display_df = filtered_df.sample(n=min(50, len(filtered_df)))
+
+# Get a list of random photos for each div
+photos = get_random_photos(len(display_df))
+
+# Display the divs with the repository links and photos
+for index, row in display_df.iterrows():
+    repo_href = row['repo_href']
+    repo_link = f"https://github.com{repo_href}"
+    display_text = repo_href.replace("/", " ")
+    photo_url = photos.pop()
+
+    st.markdown(f"""
+        <div style="border: 1px solid #ddd; padding: 16px; margin-bottom: 16px; position: relative;">
+            <img src="{photo_url}" style="width: 150px; height: 150px; position: absolute; top: 16px; right: 16px;" />
+            <h3>{display_text}</h3>
+            <p>Description for {display_text}</p>
+            <a href="{repo_link}" target="_blank" style="display: inline-block; padding: 8px 16px; background-color: #007bff; color: #fff; text-decoration: none; border-radius: 4px;">View Repository</a>
+        </div>
+    """, unsafe_allow_html=True)
